@@ -1,1 +1,235 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة حماة للخدمات الذكية | Smart Hama</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #1e3a8a; --primary-light: #3b82f6; --accent: #059669; --danger: #dc2626; --bg: #f8fafc; --card-bg: #ffffff; }
+        * { box-sizing: border-box; font-family: 'Tajawal', sans-serif; transition: all 0.25s ease; }
+        body { background: var(--bg); margin: 0; padding: 0; color: #1e293b; }
+        header { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: white; padding: 18px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+        header h1 { margin: 0; font-size: 22px; font-weight: 800; }
+        header p { margin: 5px 0 0; font-size: 13px; opacity: 0.85; }
+        .app-container { max-width: 650px; margin: 20px auto; padding: 0 12px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 22px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-weight: 700; font-size: 14px; color: #334155; }
+        input, select, textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 15px; background: #f8fafc; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-light); background: #fff; box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); }
+        .btn { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 700; font-size: 16px; cursor: pointer; width: 100%; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25); }
+        .btn:disabled { background: #94a3b8; cursor: not-allowed; box-shadow: none; }
+        #map { height: 260px; border-radius: 12px; margin-top: 12px; border: 2px solid #e2e8f0; }
+        .status-badge { padding: 14px; border-radius: 12px; font-weight: 700; font-size: 14px; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .status-locked { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+        .status-unlocked { background: #ecfdf5; color: var(--accent); border: 1px solid #a7f3d0; }
+        .user-bar { display: flex; justify-content: space-between; align-items: center; background: #e2e8f0; padding: 8px 14px; border-radius: 10px; margin-bottom: 15px; font-size: 14px; font-weight: 600; }
+        .logout-link { color: var(--danger); cursor: pointer; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🏛️ منصة حماة للخدمات الذكية</h1>
+        <p>البوابة الرقمية للتحقق الجغرافي والمشاركة الميدانية</p>
+    </header>
 
+    <div class="app-container">
+        <!-- شاشة تسجيل الدخول -->
+        <div id="login-screen" class="screen active">
+            <div class="card">
+                <h2 style="text-align: center; margin-top: 0; color: var(--primary);">تسجيل الدخول للمنصة</h2>
+                <p style="text-align: center; color: #64748b; font-size: 14px; margin-bottom: 20px;">قم بتسجيل دخولك لتقديم البلاغات الميدانية الموثقة</p>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>الاسم الكامل</label>
+                        <input type="text" id="login-name" required placeholder="مثال: علاء درويش">
+                    </div>
+                    <div class="form-group">
+                        <label>البريد الإلكتروني الرسمي</label>
+                        <input type="email" id="login-email" required placeholder="name@example.com">
+                    </div>
+                    <button type="submit" class="btn">دخول المنصة 🚀</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- الشاشة الرئيسية -->
+        <div id="main-screen" class="screen">
+            <div class="user-bar">
+                <span>👤 مرحباً: <strong id="display-user-name">--</strong></span>
+                <span class="logout-link" onclick="logout()">تسجيل خروج</span>
+            </div>
+
+            <div class="card">
+                <div id="status-box" class="status-badge status-locked">
+                    <span>📡 جاري قراءة إشارة الـ GPS والتحقق من النطاق...</span>
+                </div>
+
+                <div id="map"></div>
+
+                <form id="feedback-form" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>تصنيف الطلب</label>
+                        <select id="category">
+                            <option value="شكوى خدمية">شكوى خدمية / صيانة</option>
+                            <option value="مقترح تطويري">مقترح تطويري</option>
+                            <option value="بلاغ طارئ">بلاغ طارئ</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>تفاصيل الشكوى أو المقترح الميداني</label>
+                        <textarea id="message" rows="3" required placeholder="اكتب تفاصيل طلبك هنا بالكامل..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>📷 إرفاق صورة ميدانية (اختياري)</label>
+                        <input type="file" id="image-file" accept="image/*">
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="btn" disabled>إرسال المشاركة الموثقة ميدانياً</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let currentUser = null;
+        let map = null;
+        let userMarker = null;
+        let selectedBuildingName = '';
+        let base64Image = null;
+
+        const hamaBuildings = [
+            { name: "مبنى محافظة حماة", lat: 35.131089, lon: 36.756574 },
+            { name: "مديرية الخدمات الفنية - حماة", lat: 35.119220, lon: 36.755518 }
+        ];
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            currentUser = {
+                name: document.getElementById('login-name').value,
+                email: document.getElementById('login-email.value') || document.getElementById('login-email').value
+            };
+            document.getElementById('display-user-name').innerText = currentUser.name;
+            document.getElementById('login-screen').classList.remove('active');
+            document.getElementById('main-screen').classList.add('active');
+            initMap();
+        });
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('main-screen').classList.remove('active');
+            document.getElementById('login-screen').classList.add('active');
+        }
+
+        // تحويل الصورة المرفوعة إلى Base64 ليتم حفظها في الـ JSON
+        document.getElementById('image-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = function() {
+                    base64Image = reader.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function initMap() {
+            if (map) return;
+            map = L.map('map').setView([35.131089, 36.756574], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+            hamaBuildings.forEach(b => {
+                L.marker([b.lat, b.lon]).addTo(map).bindPopup(`<b>${b.name}</b>`);
+            });
+
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    if (userMarker) {
+                        userMarker.setLatLng([lat, lon]);
+                    } else {
+                        userMarker = L.marker([lat, lon]).addTo(map).bindPopup('موقعك الحالي').openPopup();
+                    }
+                    map.setView([lat, lon], 16);
+
+                    let closestBuilding = null;
+                    let minDistance = Infinity;
+
+                    hamaBuildings.forEach(b => {
+                        const dist = calculateDistance(lat, lon, b.lat, b.lon);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            closestBuilding = b;
+                        }
+                    });
+
+                    const statusBox = document.getElementById('status-box');
+                    const submitBtn = document.getElementById('submit-btn');
+
+                    if (minDistance <= 150) {
+                        statusBox.className = 'status-badge status-unlocked';
+                        statusBox.innerHTML = `🟢 النطاق مفعل: أنت داخل نطاق (${closestBuilding.name}) - المسافة: ${Math.round(minDistance)}m`;
+                        submitBtn.disabled = false;
+                        selectedBuildingName = closestBuilding.name;
+                    } else {
+                        statusBox.className = 'status-badge status-locked';
+                        statusBox.innerHTML = `🔒 النطاق مقفل: أقرب مبنى هو (${closestBuilding.name}) ويبعد عنك ${Math.round(minDistance)}m (الحد الأقصى 150m)`;
+                        submitBtn.disabled = true;
+                        selectedBuildingName = '';
+                    }
+                }, error => {
+                    document.getElementById('status-box').innerHTML = '⚠️ تعذر قراءة الـ GPS.';
+                }, { enableHighAccuracy: true });
+            }
+        }
+
+        document.getElementById('feedback-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!userMarker) return alert('لم يتم رصد موقعك بعد!');
+
+            const latlng = userMarker.getLatLng();
+            const response = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userName: currentUser.name,
+                    userEmail: currentUser.email,
+                    userLat: latlng.lat,
+                    userLon: latlng.lng,
+                    category: document.getElementById('category').value,
+                    message: document.getElementById('message').value,
+                    buildingName: selectedBuildingName,
+                    image: base64Image
+                })
+            });
+
+            const result = await response.json();
+            alert(result.message);
+            if (result.success) {
+                document.getElementById('feedback-form').reset();
+                base64Image = null;
+            }
+        });
+    </script>
+</body>
+</html>

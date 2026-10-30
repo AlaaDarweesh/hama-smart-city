@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم الإدارية | Smart Hama Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #0f172a; --accent: #059669; --bg: #f1f5f9; }
+        * { box-sizing: border-box; font-family: 'Tajawal', sans-serif; }
+        body { background: var(--bg); margin: 0; padding: 20px; color: #1e293b; }
+        .container { max-width: 900px; margin: auto; }
+        .header { background: var(--primary); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .feedback-grid { display: grid; gap: 15px; }
+        .feedback-card { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .feedback-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .badge { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 6px; font-size: 12px; }
+        .feedback-img { max-width: 200px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>🛡️ لوحة التحكم الإدارية - منصة حماة الذكية</h2>
+            <p>مراقبة واستعراض البلاغات الميدانية الموثقة جغرافياً (خاص بالعميل والإدارة)</p>
+        </div>
 
+        <div class="card">
+            <h3 style="margin-top:0; color: var(--primary);">سجل الشكاوى والمقترحات الواردة</h3>
+            <div id="admin-feedbacks" class="feedback-grid">
+                <p style="text-align: center; color: #64748b;">جاري تحميل السجلات...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAdminData() {
+            const container = document.getElementById('admin-feedbacks');
+            try {
+                const res = await fetch('/api/feedbacks');
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #64748b;">لا توجد بلاغات مسجلة حتى الآن.</p>';
+                    return;
+                }
+
+                container.innerHTML = data.reverse().map(item => `
+                    <div class="feedback-card">
+                        <div class="feedback-header">
+                            <span>👤 ${item.userName} (${item.userEmail})</span>
+                            <span class="badge">${item.category}</span>
+                        </div>
+                        <div>
+                            <p style="margin: 5px 0;"><strong>الرسالة:</strong> ${item.message}</p>
+                            <p style="margin: 5px 0; font-size: 13px; color: var(--accent);">📍 المبنى المرتبط: ${item.buildingName} [خط عرض: ${item.userLat.toFixed(4)}, خط طول: ${item.userLon.toFixed(4)}]</p>
+                            <small style="color: #64748b;">📅 التاريخ: ${item.date}</small>
+                        </div>
+                        ${item.image ? `<div><strong>الصورة المرفقة:</strong><br><img src="${item.image}" class="feedback-img"></div>` : ''}
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="text-align: center; color: red;">خطأ في جلب البيانات.</p>';
+            }
+        }
+
+        fetchAdminData();
+        setInterval(fetchAdminData, 5000); // تحديث تلقائي كل 5 ثوانٍ
+    </script>
+</body>
+</html>
