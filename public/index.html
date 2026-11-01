@@ -186,7 +186,7 @@
                     const statusBox = document.getElementById('status-box');
                     const submitBtn = document.getElementById('submit-btn');
 
-                    if (minDistance <= 150) {
+                    if (minDistance <= 1000) {
                         statusBox.className = 'status-badge status-unlocked';
                         statusBox.innerHTML = `🟢 النطاق مفعل: أنت داخل نطاق (${closestBuilding.name}) - المسافة: ${Math.round(minDistance)}m`;
                         submitBtn.disabled = false;
